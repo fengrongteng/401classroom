@@ -38,6 +38,11 @@ SUPABASE_URL = st.secrets.get("SUPABASE_URL", "") if hasattr(st, "secrets") else
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "") if hasattr(st, "secrets") else ""
 SUPABASE_TABLE = st.secrets.get("SUPABASE_TABLE", "reservations") if hasattr(st, "secrets") else "reservations"
 
+if SUPABASE_URL:
+    SUPABASE_URL = SUPABASE_URL.strip().rstrip("/")
+    if SUPABASE_URL.endswith("/rest/v1"):
+        SUPABASE_URL = SUPABASE_URL[:-8]
+
 
 def check_password(password):
     return hashlib.md5(password.encode()).hexdigest() == hashlib.md5(ADMIN_PASSWORD.encode()).hexdigest()
@@ -46,7 +51,12 @@ def check_password(password):
 def get_supabase_client() -> Client:
     if not SUPABASE_URL or not SUPABASE_KEY:
         raise RuntimeError("Supabase 未配置：请在 Streamlit secrets 中设置 SUPABASE_URL 和 SUPABASE_KEY")
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        raise RuntimeError(
+            f"Supabase 客户端初始化失败。请检查 SUPABASE_URL 是否为项目根地址（应类似 https://xxx.supabase.co，而不是 /rest/v1 结尾），并确认 SUPABASE_KEY 正确。原始错误：{e}"
+        )
 
 
 def normalize_reservations_df(df: pd.DataFrame) -> pd.DataFrame:
